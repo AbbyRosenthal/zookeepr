@@ -1,64 +1,19 @@
 const express = require('express');
 const { animals } = require('./data/animals.json');
+const path = require('path')
 
-const PORT = proces.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 const app = express();
 
 //parse incoming string or array data
 app.use(express.urlencoded({ extended: true }));
 //parse incomign Json data
 app.use(express.json());
+//connects everything in our public folder... style sheet, etc
+app.use(express.static('public'));
 
 
 
-
-
-//function for filtering rather than filtering within .get
-function filterByQuery(query, animalsArray) {
-    let personalityTraitsArray = [];
-    //note: we save the animalsArry as filteredResults here:
-    let filteredResults = animalsArray;
-
-    if (query.personalityTraits) {
-        //save personality traits as dedicated array.
-        //if personality traits is an string, place it into a new array and save
-        if (typeof query.personalityTraits === 'string') {
-            personalityTraitsArray = [query.personalityTraits];
-        } else {
-            personalityTraitsArray = query.personalityTraits;
-        }
-
-        //loop through each trait in the personalityTraits array
-        personalityTraitsArray.forEach(trait => {
-            // Check the trait against each animal in the filteredResults array.
-            // Remember, it is initially a copy of the animalsArray,
-            // but here we're updating it for each trait in the .forEach() loop.
-            // For each trait being targeted by the filter, the filteredResults
-            // array will then contain only the entries that contain the trait,
-            // so at the end we'll have an array of animals that have every one 
-            // of the traits when the .forEach() loop is finished.
-            filteredResults = filteredResults.filter(
-                animal => animal.personalityTraits.indexOf(trait) !== -1
-            );
-        });
-    }
-
-    if (query.diet) {
-        filteredResults = filteredResults.filter(animal => animal.diet === query.diet);
-    }
-    if (query.species) {
-        filteredResults = filteredResults.filter(animal => animal.species === query.species);
-    }
-    if (query.name) {
-        filteredResults = filteredResults.filter(animal => animal.name === query.name);
-    }
-    return filteredResults;
-};
-
-function findById(id, animalsArray) {
-    const result = animalsArray.filter(animal => animal.id === id)[0];
-    return result;
-}
 
 //called a GET route
 app.get('/api/animals', (req, res) => {
@@ -73,20 +28,61 @@ app.get('/api/animals', (req, res) => {
 app.get('/api/animals/:id', (req, res) => {
     const result = findById(req.params.id, animals);
     if (result) {
-        res.json(result);
+      res.json(result);
     } else {
-        res.send(404);
+      res.send(404);
     }
-});
+  });
 
-app.post('/api/animals', (req,res) => {
-    //req.body is where our incoming content will be
-    console.log(req.body);
-    //sends data back to the client
-    res.json(req.body);
-});
+  app.post('/api/animals', (req, res) => {
+    // set id based on what the next index of the array will be
+    req.body.id = animals.length.toString();
+  
+    if (!validateAnimal(req.body)) {
+      res.status(400).send('The animal is not properly formatted.');
+    } else {
+      const animal = createNewAnimal(req.body, animals);
+      res.json(animal);
+    }
+  });
 
-app.listen(3001, () => {
-    console.log('API server now on port 3001!');
-});
+  // the "/" route brings us to the root of the server! this route is used to create a homepage for a server
+  // this routes job is to respond with an HTML page to display in the browswer
+  app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, './public/index.html'));
+    });
+
+    //get route for our animals.html
+    app.get('/animals', (req, res) => {
+        res.sendFile(path.join(__dirname, './public/animals.html'));
+    });
+
+    //get route for zookeepers.html
+    app.get('/zookeepers', (req, res) => {
+        res.sendFile(path.join(__dirname, './public/zookeepers.html'));
+      });
+
+//sends user to main page if a non existant url is entered
+//ROUTE ORDER MATTERS... this one should come last or it'll overwrite the other routes
+      app.get('*', (req, res) => {
+          res.sendFile(path.join(__dirname, 'public/index.html'));
+      })
+    
+    app.listen(PORT, () => {
+        console.log(`API server now on port ${PORT}!`);
+    });
+
+
+
+
+
+
+
+
+    // app.post('/api/animals', (req,res) => {
+    //     //req.body is where our incoming content will be
+    //     console.log(req.body);
+    //     //sends data back to the client
+    //     res.json(req.body);
+    // });
  
